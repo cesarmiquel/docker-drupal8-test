@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+
+import os
+import argparse
+import platform
+
+LOCK_FILE = '.d4d-running'
+
+# @TODO Remove ugly global
+debug = True
+rootfs = None
+
+# Helper class for colors
+class bgcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# PS command ----------------------------------------------------------------------------
+def cmd_ps():
+    exec_cmd('docker ps -a')
+
+# Up command ----------------------------------------------------------------------------
+def cmd_up():
+
+    # dont't allow up if running
+    if containers_running():
+        print("Already running containers. Use down first.")
+        return
+
+    if os.path.exists(rootfs + '/app/project/docroot') != True:
+        print("Must run build-site.sh first.")
+        return
+
+    # Launch data container
+    cmd = 'docker run --name data -v %s/app:/data:rw \
+            -v %s/app/db:/var/lib/mysql:rw gliderlabs/alpine:3.2 /bin/true'
+    exec_cmd(cmd % (rootfs, rootfs))
+
+    # Launch db container
+    if platform.system() == 'Darwin':
+        print("WARNING: in Mac OS X the Database is NOT persistant. Once you do a d4d down you will loose any database changes!!")
+        exec_cmd('docker -D=true run -d --name db -p 3306:3306 d4d/mu-mysql')
+    else:
+        exec_cmd('docker -D=true run -d --name db --volumes-from data -p 3306:3306 d4d/mu-mysql')
+
+    # Launch memcached container
+    exec_cmd('docker -D=true run -d --name memcached d4d/mu-memcached')
+
+    # Launch solr container
+    exec_cmd('docker -D=true run -d --name solr d4d/mu-solr')
+
+    # Launch php container
+    exec_cmd('docker -D=true run -d --name php --link solr:solr --link db:db --link memcached:memcached --volumes-from data d4d/mu-php')
+
+    # Launch nginx container
+    exec_cmd('docker -D=true run -d --name nginx --link php:php --link memcached:memcached -p 8000:80 -p 8443:443 --volumes-from data d4d/mu-nginx')
+
+    # Create lock file
+    create_lock_file()
+
+
+# Down command ----------------------------------------------------------------------------
+def cmd_down():
+    if containers_running():
+        exec_cmd('docker stop data db memcached php nginx solr')
+        exec_cmd('docker rm -v data db memcached php nginx solr')
+        delete_lock_file()
+
+# Clean command ----------------------------------------------------------------------------
+def cmd_clean():
+    images = ['d4d/mu-mysql', 'd4d/mu-memcached', 'd4d/mu-php', 'd4d/mu-nginx', 'd4d/mu-composer', 'd4d/mu-drush8', 'd4d/solr']
+    for image_name in images:
+        exec_cmd('docker rmi ' + image_name)
+
+# Build command ----------------------------------------------------------------------------
+def cmd_build():
+
+    print('Executing command build...')
+
+    os.chdir(rootfs + '/docker/docker-mysql')
+    exec_cmd('docker build -t d4d/mu-mysql .')
+
+    os.chdir(rootfs + '/docker/docker-memcached')
+    exec_cmd('docker build -t d4d/mu-memcached .')
+
+    os.chdir(rootfs + '/docker/docker-php')
+    exec_cmd('docker build -t d4d/mu-php .')
+
+    os.chdir(rootfs + '/docker/docker-nginx')
+    exec_cmd('docker build -t d4d/mu-nginx .')
+
+    os.chdir(rootfs + '/docker/docker-solr')
+    exec_cmd('docker build -t d4d/mu-solr .')
+
+    os.chdir(rootfs + '/docker/docker-composer')
+    exec_cmd('docker build -t d4d/mu-composer .')
+
+    os.chdir(rootfs + '/docker/docker-drush8')
+    exec_cmd('docker build -t d4d/mu-drush8 .')
+
+    os.chdir(rootfs + '/docker/docker-console')
+    exec_cmd('docker build -t d4d/mu-console .')
+
+    os.chdir(rootfs)
+
+    app_dir = rootfs + '/app'
+    if os.path.exists(app_dir) != True:
+        exec_cmd('mkdir -p %s/db %s/logs %s/project' % (app_dir, app_dir, app_dir))
+        
+def cmd_composer(args):
+    args_string = ' '.join([str(i) for i in args])
+    cmd = 'docker run -ti --rm --name composer --link db:db --volumes-from data d4d/mu-composer '
+    cmd += args_string
+    exec_cmd(cmd)
+
+def cmd_drush(args):
+    args_string = ' '.join([str(i) for i in args])
+    cmd = 'docker run -ti --rm --name drush --link db:db --link memcached:memcached --volumes-from data d4d/mu-drush8 '
+    cmd += args_string
+    exec_cmd(cmd)
+
+def cmd_drupal(args):
+    args_string = ' '.join([str(i) for i in args])
+    cmd = 'docker run -ti --rm --name drupal --link db:db --link memcached:memcached --volumes-from data d4d/mu-console '
+    cmd += args_string
+    exec_cmd(cmd)
+
+
+
+# Helpers  ---------------------------------------------------------------------
+def exec_cmd(cmd):
+    if debug:
+        print("Executing [" + bgcolors.OKGREEN + cmd + bgcolors.ENDC + "]")
+    os.system(cmd)
+
+def containers_running():
+    if os.path.exists(rootfs + '/' + LOCK_FILE):
+        return True
+    return False
+
+def create_lock_file():
+    open(rootfs + '/' + LOCK_FILE, 'a').close()
+
+def delete_lock_file():
+    if containers_running():
+        os.remove(rootfs + '/' + LOCK_FILE)
+
+
+# ------------------------------------------------------------------------------
+# Main entry point
+# ------------------------------------------------------------------------------
+if __name__ == "__main__":
+
+    # Parse args
+    parser = argparse.ArgumentParser(prog = 'd4d')
+    parser.add_argument('command', nargs=1, choices=['clean', 'up', 'down', 'build', 'ps', 'composer', 'drush', 'drupal'], help='Command to execute.')
+    parser.add_argument('args', nargs='*', help='Additiona alrguments')
+    args = parser.parse_args()
+
+    # Setup global path
+    rootfs = os.getcwd()
+
+    # Process commands
+    if args.command[0] == 'up':
+        cmd_up()
+    elif args.command[0] == 'down':
+        cmd_down()
+    elif args.command[0] == 'build':
+        cmd_build()
+    elif args.command[0] == 'clean':
+        cmd_clean()
+    elif args.command[0] == 'ps':
+        cmd_ps()
+    elif args.command[0] == 'composer':
+        cmd_composer(args.args)
+    elif args.command[0] == 'drush':
+        cmd_drush(args.args)
+    elif args.command[0] == 'drupal':
+        cmd_drupal(args.args)
+
