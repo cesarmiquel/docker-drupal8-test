@@ -4,9 +4,6 @@
 # Parametros que pueden depender de la maquina del usuario.
 # -------------------------------------------------------------------
 
-GIT=`which git`
-GIT_REPO_URL="git@bitbucket.org:kurobits/condo-profile.git"
-GIT_BRANCH="feature/new-theme"
 DRUPAL_VER='8.0.6'
 
 # ===================== NO EDITAR DESPUES DE ESTO ===================
@@ -30,19 +27,11 @@ then
     exec "cp $ROOTFS/default.settings.php $DEFAULT_DIR/settings.php"
     exec "cp $ROOTFS/settings.local.php $DEFAULT_DIR"
 
-    #echo '' >> $DEFAULT_DIR/settings.php
-    #echo '// read local settings' >> $DEFAULT_DIR/settings.php
-    #echo 'if (file_exists(__DIR__ . "/local.settings.php")) {' >> $DEFAULT_DIR/settings.php
-    #echo ' require(__DIR__ . "/local.settings.php");' >> $DEFAULT_DIR/settings.php
-    #echo '}' >> $DEFAULT_DIR/settings.php
-
-    #print "Copying local settings for site ..."
-
     print ''
     print '----------------------------------------------------------------------'
     print 'Entrar a:'
     print '  http://localhost:8000'
 
 else
-    print "Ya existe el directorio project/docroot."
+    print "Directory project/docroot already exists. Aborting."
 fi
