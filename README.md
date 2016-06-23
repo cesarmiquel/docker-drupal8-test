@@ -1,25 +1,24 @@
-# Entorno de desarrollo para Condo
+# Drupal 8 lightweight containers
 
+This Docker images and scripts will allow you to have a Drupal 8 up and running with Drush and Drupal Console.
 
-Para utilizar este entorno asegurarse de tener docker instalado.
+## First Initialization
 
-La primera vez se debe ejecutar los siguientes comandos:
+Make sure there are no running containers with:
 
+        $ ./d4d ps
+
+You'll need to build your environment for the first time with the following commands:
 
         $ . env.sh
-        $ d4d clean
         $ d4d build
         $ ./build-site.sh
 
-Estos comandos generan las imagenes de docker y configuran un sitio de condo para arrancar. Para terminar la primera vez hay que correr el install.php para instalar el perfil de instalación de Condo:
+Once the build-site.sh script is done you will have a D8 site ready at the following URL:
 
-*  http://localhost:8000/install.php
+*  http://localhost:8000/
 
-Cada vez que se quiera trabajar hay que ejecutar:
+To halt the containers do:
 
-        $ . env
-        $ d4d up
+        $ d4d down
 
-El código está en el siguiente directorio:
-
-* app/docroot/profiles/condo/
