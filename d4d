@@ -45,9 +45,9 @@ def cmd_up():
     # Launch db container
     if platform.system() == 'Darwin':
         print("WARNING: in Mac OS X the Database is NOT persistant. Once you do a d4d down you will loose any database changes!!")
-        exec_cmd('docker -D=true run -d --name db -p 3306:3306 d4d/mu-mysql')
+        exec_cmd('docker -D=true run -d --name db -p 33306:3306 d4d/mu-mysql')
     else:
-        exec_cmd('docker -D=true run -d --name db --volumes-from data -p 3306:3306 d4d/mu-mysql')
+        exec_cmd('docker -D=true run -d --name db --volumes-from data -p 33306:3306 d4d/mu-mysql')
 
     # Launch memcached container
     exec_cmd('docker -D=true run -d --name memcached d4d/mu-memcached')
