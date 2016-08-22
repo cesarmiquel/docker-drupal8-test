@@ -4,7 +4,7 @@
 # Parametros que pueden depender de la maquina del usuario.
 # -------------------------------------------------------------------
 
-DRUPAL_VER='8.1.3'
+DRUPAL_VERSION='8.1.8'
 
 # ===================== NO EDITAR DESPUES DE ESTO ===================
 
@@ -12,14 +12,12 @@ DRUPAL_VER='8.1.3'
 
 print "Building site............"
 
-# Clone repo and add symblink
-if [ ! -d $ROOTFS/app/project/docroot ]
+if [ ! -d $ROOTFS/app/docroot ]
 then
 
     print "Downloading latest Drupal Core 8 ..."
-    exec "wget -O - https://ftp.drupal.org/files/projects/drupal-${DRUPAL_VER}.tar.gz | tar zxf -"
-    exec "mv drupal-${DRUPAL_VER} app/project/docroot"
-    exec 'ln -s project/docroot app/docroot'
+    exec "wget -O /tmp/drupal-${DRUPAL_VERSION}.tar.gz https://ftp.drupal.org/files/projects/drupal-${DRUPAL_VERSION}.tar.gz"
+    exec "mkdir -p app/docroot && tar xf /tmp/drupal-${DRUPAL_VERSION}.tar.gz -C app/docroot --strip-components=1"
 
     DEFAULT_DIR="$ROOTFS/app/docroot/sites/default"
 
@@ -30,15 +28,13 @@ then
     print "Enabling docker and waiting a little...."
     exec "$ROOTFS/d4d up"
 
-    sleep 15;
-
     print "Running a site install ..."
     exec "$ROOTFS/d4d drush si -- -y --account-name=admin --account-pass=qwerty --site-name=TestD8"
 
     print ''
     print '----------------------------------------------------------------------'
     print 'Ready! Point your browser to your new site. User: admin / Pass: qwerty'
-    print '  http://localhost:8000'
+    print '  http://localhost'
 
 else
     print "Directory project/docroot already exists. Aborting."
