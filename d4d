@@ -6,7 +6,6 @@ import platform
 
 # @TODO Remove ugly global
 debug = True
-rootfs = None
 
 # Helper class for colors
 class bgcolors:
@@ -70,9 +69,6 @@ if __name__ == "__main__":
     parser.add_argument('command', nargs=1, choices=['up', 'down', 'build', 'ps', 'composer', 'drush', 'console'], help='Command to execute.')
     parser.add_argument('args', nargs='*', help='Additiona alrguments')
     args = parser.parse_args()
-
-    # Setup global path
-    rootfs = os.getcwd()
 
     # Process commands
     if args.command[0] == 'up':
