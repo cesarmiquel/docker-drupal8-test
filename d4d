@@ -4,8 +4,6 @@ import os
 import argparse
 import platform
 
-LOCK_FILE = '.d4d-running'
-
 # @TODO Remove ugly global
 debug = True
 rootfs = None
